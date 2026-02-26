@@ -2,21 +2,21 @@
  * AFA Sports booking API client and slot parsing logic.
  */
 
-import type { BookingResponse, CourtBlock, Config, SlotId } from "./types";
+import type { BookingResponse, CourtBlock, Config, SlotId } from './types';
 
-const BOOKING_URL = "https://community.afa-sports.com/kiosk/booking";
+const BOOKING_URL = 'https://community.afa-sports.com/kiosk/booking';
 const SPORTS_FACILITY_ID = 643;
 
 function formatDateInTz(d: Date, tz: string): string {
-	const parts = new Intl.DateTimeFormat("en-CA", {
+	const parts = new Intl.DateTimeFormat('en-CA', {
 		timeZone: tz,
-		year: "numeric",
-		month: "2-digit",
-		day: "2-digit",
+		year: 'numeric',
+		month: '2-digit',
+		day: '2-digit',
 	}).formatToParts(d);
-	const year = parts.find((p) => p.type === "year")?.value ?? "";
-	const month = parts.find((p) => p.type === "month")?.value ?? "";
-	const day = parts.find((p) => p.type === "day")?.value ?? "";
+	const year = parts.find((p) => p.type === 'year')?.value ?? '';
+	const month = parts.find((p) => p.type === 'month')?.value ?? '';
+	const day = parts.find((p) => p.type === 'day')?.value ?? '';
 	return `${year}-${month}-${day}`;
 }
 
@@ -32,14 +32,12 @@ export function getTodayInTz(tz: string): string {
  */
 export function getCurrentISOWeek(tz: string): string {
 	const todayStr = getTodayInTz(tz);
-	const [y, m, d] = todayStr.split("-").map(Number);
+	const [y, m, d] = todayStr.split('-').map(Number);
 	const date = new Date(Date.UTC(y!, m! - 1, d!));
 	date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
 	const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-	const weekNo = Math.ceil(
-		((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7,
-	);
-	return `${date.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
+	const weekNo = Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+	return `${date.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
 }
 
 /**
@@ -47,7 +45,7 @@ export function getCurrentISOWeek(tz: string): string {
  */
 export function getRemainingWeekDates(tz: string): string[] {
 	const todayStr = getTodayInTz(tz);
-	const baseDate = new Date(todayStr + "T12:00:00Z");
+	const baseDate = new Date(todayStr + 'T12:00:00Z');
 	const dayOfWeek = baseDate.getUTCDay();
 	const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
 	const dates: string[] = [];
@@ -72,7 +70,7 @@ function parseSlotRange(slotKey: string): { startHour: number; endHour: number }
 }
 
 function isBadmintonCourt(court: string): boolean {
-	return court.startsWith("Badminton Court ");
+	return court.startsWith('Badminton Court ');
 }
 
 function slotId(date: string, timeSlot: string, court: string): SlotId {
@@ -84,13 +82,13 @@ function slotId(date: string, timeSlot: string, court: string): SlotId {
  */
 export async function fetchAvailability(date: string): Promise<BookingResponse> {
 	const res = await fetch(BOOKING_URL, {
-		method: "POST",
+		method: 'POST',
 		headers: {
-			accept: "application/json, text/plain, */*",
-			"content-type": "application/json",
-			auth: "334",
-			origin: "https://book.afa-sports.com",
-			referer: "https://book.afa-sports.com/",
+			accept: 'application/json, text/plain, */*',
+			'content-type': 'application/json',
+			auth: '334',
+			origin: 'https://book.afa-sports.com',
+			referer: 'https://book.afa-sports.com/',
 		},
 		body: JSON.stringify({
 			sports_facility_id: SPORTS_FACILITY_ID,
@@ -102,29 +100,46 @@ export async function fetchAvailability(date: string): Promise<BookingResponse> 
 	}
 	const json = (await res.json()) as BookingResponse;
 	if (json.success !== 1 || !json.data) {
-		throw new Error("Booking API returned invalid response");
+		throw new Error('Booking API returned invalid response');
 	}
 	return json;
+}
+
+/**
+ * Fetches availability for the remaining week and returns all qualifying blocks.
+ * Does not update KV or respect cooldown — for on-demand /check.
+ */
+export async function fetchAllQualifyingBlocks(config: Config): Promise<CourtBlock[]> {
+	const dates = getRemainingWeekDates(config.timezone);
+	const allBlocks: CourtBlock[] = [];
+
+	for (const date of dates) {
+		try {
+			const resp = await fetchAvailability(date);
+			if (resp.data) {
+				const blocks = extractQualifyingBlocks(date, resp.data, config);
+				allBlocks.push(...blocks);
+			}
+		} catch (err) {
+			console.error(`[check] API error for ${date}:`, err);
+		}
+	}
+
+	return allBlocks;
 }
 
 /**
  * Extracts qualifying contiguous blocks from API data for a single date.
  * Only includes blocks >= minBlockHours and within the configured time range.
  */
-export function extractQualifyingBlocks(
-	date: string,
-	data: Record<string, Record<string, boolean>>,
-	config: Config,
-): CourtBlock[] {
+export function extractQualifyingBlocks(date: string, data: Record<string, Record<string, boolean>>, config: Config): CourtBlock[] {
 	const blocks: CourtBlock[] = [];
 	const slotKeys = Object.keys(data).sort();
 
 	const timeSlotsInRange = slotKeys.filter((key) => {
 		const range = parseSlotRange(key);
 		if (!range) return false;
-		return (
-			range.startHour >= config.timeStartHour && range.endHour <= config.timeEndHour
-		);
+		return range.startHour >= config.timeStartHour && range.endHour <= config.timeEndHour;
 	});
 
 	const courts = new Set<string>();
@@ -137,9 +152,7 @@ export function extractQualifyingBlocks(
 	}
 
 	for (const court of courts) {
-		const availableSlots = timeSlotsInRange.filter(
-			(key) => data[key]?.[court] === true,
-		);
+		const availableSlots = timeSlotsInRange.filter((key) => data[key]?.[court] === true);
 		const contiguous = findContiguousRuns(availableSlots);
 		const minSlots = Math.ceil(config.minBlockHours * 2);
 		for (const run of contiguous) {

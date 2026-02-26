@@ -8,18 +8,19 @@
 	"main": "src/index.ts",
 	"compatibility_date": "2025-09-27",
 	"observability": {
-		"enabled": true
+		"enabled": true,
 	},
 	"triggers": {
-		"crons": ["*/5 * * * *"]
+		"crons": ["*/5 * * * *"],
 	},
 	// Run: wrangler kv namespace create BADMINTON_KV
 	"kv_namespaces": [
-		{ "binding": "BADMINTON_KV", "id": "YOUR_KV_NAMESPACE_ID" }
+		{
+			"binding": "BADMINTON_KV",
+			"id": "e148c0666c0b44d5a64b2b0877f14878",
+		},
 	],
-	"compatibility_flags": [
-		"nodejs_compat"
-	]
+	"compatibility_flags": ["nodejs_compat"],
 	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement

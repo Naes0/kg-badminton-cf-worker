@@ -2,9 +2,9 @@
  * KV storage helpers for state and config.
  */
 
-import type { KVState, Config } from "./types";
+import type { KVState, Config } from './types';
 
-const STATE_KEY = "state";
+const STATE_KEY = 'state';
 
 function isValidTimezone(tz: string): boolean {
 	try {
@@ -14,7 +14,7 @@ function isValidTimezone(tz: string): boolean {
 		return false;
 	}
 }
-const CONFIG_KEY = "config";
+const CONFIG_KEY = 'config';
 
 const DEFAULT_STATE: KVState = {
 	lastNotifiedSlots: [],
@@ -26,7 +26,7 @@ const DEFAULT_CONFIG: Config = {
 	timeStartHour: 19,
 	timeEndHour: 22,
 	minBlockHours: 2,
-	timezone: "Australia/Perth",
+	timezone: 'Australia/Perth',
 };
 
 export interface KVNamespaceBinding {
@@ -40,25 +40,17 @@ export async function getState(kv: KVNamespaceBinding): Promise<KVState> {
 	try {
 		const parsed = JSON.parse(raw) as Partial<KVState>;
 		return {
-			lastNotifiedSlots: Array.isArray(parsed.lastNotifiedSlots)
-				? parsed.lastNotifiedSlots
-				: DEFAULT_STATE.lastNotifiedSlots,
-			bookedWeek:
-				parsed.bookedWeek != null ? parsed.bookedWeek : DEFAULT_STATE.bookedWeek,
+			lastNotifiedSlots: Array.isArray(parsed.lastNotifiedSlots) ? parsed.lastNotifiedSlots : DEFAULT_STATE.lastNotifiedSlots,
+			bookedWeek: parsed.bookedWeek != null ? parsed.bookedWeek : DEFAULT_STATE.bookedWeek,
 			lastNotificationTimestamp:
-				typeof parsed.lastNotificationTimestamp === "number"
-					? parsed.lastNotificationTimestamp
-					: DEFAULT_STATE.lastNotificationTimestamp,
+				typeof parsed.lastNotificationTimestamp === 'number' ? parsed.lastNotificationTimestamp : DEFAULT_STATE.lastNotificationTimestamp,
 		};
 	} catch {
 		return { ...DEFAULT_STATE };
 	}
 }
 
-export async function setState(
-	kv: KVNamespaceBinding,
-	state: Partial<KVState>,
-): Promise<void> {
+export async function setState(kv: KVNamespaceBinding, state: Partial<KVState>): Promise<void> {
 	const current = await getState(kv);
 	const merged: KVState = {
 		...current,
@@ -74,45 +66,30 @@ export async function getConfig(kv: KVNamespaceBinding): Promise<Config> {
 		const parsed = JSON.parse(raw) as Partial<Config>;
 		return {
 			timeStartHour:
-				typeof parsed.timeStartHour === "number" &&
-				parsed.timeStartHour >= 0 &&
-				parsed.timeStartHour <= 23
+				typeof parsed.timeStartHour === 'number' && parsed.timeStartHour >= 0 && parsed.timeStartHour <= 23
 					? parsed.timeStartHour
 					: DEFAULT_CONFIG.timeStartHour,
 			timeEndHour:
-				typeof parsed.timeEndHour === "number" &&
-				parsed.timeEndHour >= 0 &&
-				parsed.timeEndHour <= 23
+				typeof parsed.timeEndHour === 'number' && parsed.timeEndHour >= 0 && parsed.timeEndHour <= 23
 					? parsed.timeEndHour
 					: DEFAULT_CONFIG.timeEndHour,
 			minBlockHours:
-				typeof parsed.minBlockHours === "number" &&
-				parsed.minBlockHours >= 0.5 &&
-				parsed.minBlockHours <= 8
+				typeof parsed.minBlockHours === 'number' && parsed.minBlockHours >= 0.5 && parsed.minBlockHours <= 8
 					? parsed.minBlockHours
 					: DEFAULT_CONFIG.minBlockHours,
-			timezone:
-				typeof parsed.timezone === "string" && isValidTimezone(parsed.timezone)
-					? parsed.timezone
-					: DEFAULT_CONFIG.timezone,
+			timezone: typeof parsed.timezone === 'string' && isValidTimezone(parsed.timezone) ? parsed.timezone : DEFAULT_CONFIG.timezone,
 		};
 	} catch {
 		return { ...DEFAULT_CONFIG };
 	}
 }
 
-export async function setConfig(
-	kv: KVNamespaceBinding,
-	updates: Partial<Config>,
-): Promise<Config> {
+export async function setConfig(kv: KVNamespaceBinding, updates: Partial<Config>): Promise<Config> {
 	const current = await getConfig(kv);
 	const merged: Config = {
 		...current,
 		...updates,
-		...(updates.timezone !== undefined &&
-		!isValidTimezone(updates.timezone)
-			? { timezone: current.timezone }
-			: {}),
+		...(updates.timezone !== undefined && !isValidTimezone(updates.timezone) ? { timezone: current.timezone } : {}),
 	};
 	await kv.put(CONFIG_KEY, JSON.stringify(merged));
 	return merged;

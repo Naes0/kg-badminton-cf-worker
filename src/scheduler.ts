@@ -2,30 +2,22 @@
  * Cron scheduler: fetches booking API, diffs against KV, sends Discord notifications.
  */
 
-import {
-	fetchAvailability,
-	extractQualifyingBlocks,
-	getRemainingWeekDates,
-	getCurrentISOWeek,
-} from "./booking";
-import { getState, setState, getConfig } from "./kv";
-import { sendWebhookMessage, formatBlocksMessage } from "./discord";
-import type { CourtBlock, SlotId } from "./types";
+import { fetchAvailability, extractQualifyingBlocks, getRemainingWeekDates, getCurrentISOWeek } from './booking';
+import { getState, setState, getConfig } from './kv';
+import { sendWebhookMessage, formatBlocksMessage } from './discord';
+import type { CourtBlock, SlotId } from './types';
 
 const COOLDOWN_MS = 30 * 60 * 1000;
 
-export type SchedulerEnv = import("./env").WorkerEnv;
+export type SchedulerEnv = import('./env').WorkerEnv;
 
 export async function runScheduler(env: SchedulerEnv): Promise<void> {
 	try {
-		const [state, config] = await Promise.all([
-			getState(env.BADMINTON_KV),
-			getConfig(env.BADMINTON_KV),
-		]);
+		const [state, config] = await Promise.all([getState(env.BADMINTON_KV), getConfig(env.BADMINTON_KV)]);
 
 		const currentWeek = getCurrentISOWeek(config.timezone);
 		if (state.bookedWeek === currentWeek) {
-			console.log("[scheduler] Skipping: booked for current week");
+			console.log('[scheduler] Skipping: booked for current week');
 			return;
 		}
 
@@ -59,7 +51,7 @@ export async function runScheduler(env: SchedulerEnv): Promise<void> {
 				await setState(env.BADMINTON_KV, {
 					lastNotifiedSlots: [...qualifyingSlotIds],
 				});
-				console.log("[scheduler] Updated KV: removed booked slots");
+				console.log('[scheduler] Updated KV: removed booked slots');
 			}
 			return;
 		}
@@ -69,19 +61,17 @@ export async function runScheduler(env: SchedulerEnv): Promise<void> {
 			await setState(env.BADMINTON_KV, {
 				lastNotifiedSlots: [...qualifyingSlotIds],
 			});
-			console.log("[scheduler] Cooldown active, updated slots only");
+			console.log('[scheduler] Cooldown active, updated slots only');
 			return;
 		}
 
 		const newSlotSet = new Set(newSlots);
-		const blocksToNotify = allBlocks.filter((b) =>
-			b.slotIds.some((id) => newSlotSet.has(id)),
-		);
+		const blocksToNotify = allBlocks.filter((b) => b.slotIds.some((id) => newSlotSet.has(id)));
 
 		const message = formatBlocksMessage(blocksToNotify);
 		const ok = await sendWebhookMessage(env.DISCORD_WEBHOOK_URL, message);
 		if (!ok) {
-			console.error("[scheduler] Failed to send webhook");
+			console.error('[scheduler] Failed to send webhook');
 			return;
 		}
 
@@ -89,9 +79,9 @@ export async function runScheduler(env: SchedulerEnv): Promise<void> {
 			lastNotifiedSlots: [...qualifyingSlotIds],
 			lastNotificationTimestamp: now,
 		});
-		console.log("[scheduler] Notified", newSlots.length, "new slots");
+		console.log('[scheduler] Notified', newSlots.length, 'new slots');
 	} catch (err) {
-		console.error("[scheduler] Error:", err);
+		console.error('[scheduler] Error:', err);
 		throw err;
 	}
 }

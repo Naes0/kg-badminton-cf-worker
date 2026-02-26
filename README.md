@@ -36,8 +36,34 @@ Cloudflare Worker that polls the AFA Sports booking API every 5 minutes and send
    pnpm deploy
    ```
 
+## Local testing (without Discord)
+
+Add `LOCAL_DEV=1` to `.dev.vars`, then run `pnpm dev`:
+
+- **Trigger scheduler** — `curl http://localhost:8787/__dev/trigger-scheduler`
+- **Wrangler cron** — `curl "http://localhost:8787/__scheduled?cron=*+*+*+*+*"`
+- **Test slash commands** — POST JSON to `/__dev/slash`:
+
+  ```bash
+  # /settings view
+  curl -X POST http://localhost:8787/__dev/slash -H "Content-Type: application/json" -d '{"type":2,"data":{"name":"settings","options":[{"name":"view"}]}}'
+
+  # /settings set time-start=19 time-end=22
+  curl -X POST http://localhost:8787/__dev/slash -H "Content-Type: application/json" -d '{"type":2,"data":{"name":"settings","options":[{"name":"set","options":[{"name":"time-start","value":19},{"name":"time-end","value":22}]}]}}'
+
+  # /booked
+  curl -X POST http://localhost:8787/__dev/slash -H "Content-Type: application/json" -d '{"type":2,"data":{"name":"booked"}}'
+
+  # /cancel
+  curl -X POST http://localhost:8787/__dev/slash -H "Content-Type: application/json" -d '{"type":2,"data":{"name":"cancel"}}'
+
+  # /check (manual availability lookup, bypasses cooldown)
+  curl -X POST http://localhost:8787/__dev/slash -H "Content-Type: application/json" -d '{"type":2,"data":{"name":"check"}}'
+  ```
+
 ## Commands
 
+- `/check` — Check court availability now (bypasses cooldown, returns times directly)
 - `/booked` — Pause notifications for the current week
 - `/cancel` — Resume notifications
 - `/settings view` — Show current time range, min block, and timezone

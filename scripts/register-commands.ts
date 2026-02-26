@@ -27,6 +27,10 @@ const COMMANDS = [
 		description: "Resume notifications (undo /booked pause)",
 	},
 	{
+		name: "check",
+		description: "Check court availability now (bypasses cooldown, uses your settings)",
+	},
+	{
 		name: "settings",
 		description: "View or update search settings (time range, min block size)",
 		options: [
