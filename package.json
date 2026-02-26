@@ -1,0 +1,23 @@
+{
+	"name": "badminton-bot-cf-worker",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev --test-scheduled",
+		"start": "wrangler dev --test-scheduled",
+		"cf-typegen": "wrangler types",
+		"register-commands": "pnpm exec tsx scripts/register-commands.ts"
+	},
+	"dependencies": {
+		"@t3-oss/env-core": "^0.13.10",
+		"zod": "^3.23.8"
+	},
+	"devDependencies": {
+		"@types/node": "^25.3.1",
+		"dotenv": "^16.4.5",
+		"tsx": "^4.19.2",
+		"typescript": "^5.5.2",
+		"wrangler": "^4.68.1"
+	}
+}
